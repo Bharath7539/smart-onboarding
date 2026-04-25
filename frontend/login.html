@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Employee Onboarding & Identity Service</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-box {
+      width: 340px;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .project-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #007bff;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="login-box">
+
+  <!-- ✅ PROJECT NAME -->
+  <div class="project-title">
+    Smart Employee Onboarding & Identity Service
+  </div>
+
+  <h2>Employee Login</h2>
+
+  <input id="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Password">
+
+  <button onclick="login()">Login</button>
+
+  <div id="error" class="error"></div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.2.0/dist/amazon-cognito-identity.min.js"></script>
+
+<script>
+function login() {
+
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  if (!email || !password) {
+    document.getElementById("error").innerText = "Enter email and password";
+    return;
+  }
+
+  const poolData = {
+    UserPoolId: "ap-south-2_OfYiLqtzQ",
+    ClientId: "6cgh6nv08j899krghn7vtjfb15"
+  };
+
+  const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+
+  const cognitoUser = new AmazonCognitoIdentity.CognitoUser({
+    Username: email,
+    Pool: userPool
+  });
+
+  const authDetails = new AmazonCognitoIdentity.AuthenticationDetails({
+    Username: email,
+    Password: password
+  });
+
+  cognitoUser.authenticateUser(authDetails, {
+
+    onSuccess: function(result) {
+      const token = result.getIdToken().getJwtToken();
+      localStorage.setItem("token", token);
+      window.location.href = "dashboard.html";
+    },
+
+    onFailure: function(err) {
+      document.getElementById("error").innerText = err.message;
+    },
+
+    newPasswordRequired: function() {
+      const newPassword = prompt("Enter new password:");
+
+      cognitoUser.completeNewPasswordChallenge(newPassword, {}, {
+        onSuccess: function(result) {
+          const token = result.getIdToken().getJwtToken();
+          localStorage.setItem("token", token);
+          window.location.href = "dashboard.html";
+        },
+        onFailure: function(err) {
+          alert(err.message);
+        }
+      });
+    }
+
+  });
+}
+</script>
+
+</body>
+</html>

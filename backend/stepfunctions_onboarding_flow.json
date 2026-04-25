@@ -1,0 +1,60 @@
+{
+  "Comment": "Smart onboarding workflow with IT provisioning and Day 1 readiness",
+  "StartAt": "CheckDocuments",
+  "States": {
+    "CheckDocuments": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:checkDocuments",
+      "Next": "DocsChoice"
+    },
+    "DocsChoice": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.complete",
+          "BooleanEquals": true,
+          "Next": "ITProvisioning"
+        }
+      ],
+      "Default": "Wait24Hours"
+    },
+    "Wait24Hours": {
+      "Type": "Wait",
+      "Seconds": 86400,
+      "Next": "SendReminder"
+    },
+    "SendReminder": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:sendReminder",
+      "Next": "CheckDocuments"
+    },
+    "ITProvisioning": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:itProvisioning",
+      "Next": "AssetAssignment"
+    },
+    "AssetAssignment": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:assignAsset",
+      "Next": "PolicySignoff"
+    },
+    "PolicySignoff": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:policySignoff",
+      "Next": "ManagerIntro"
+    },
+    "ManagerIntro": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:managerIntro",
+      "Next": "MarkDay1Ready"
+    },
+    "MarkDay1Ready": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:REGION:ACCOUNT:function:markDay1Ready",
+      "Next": "Completed"
+    },
+    "Completed": {
+      "Type": "Succeed"
+    }
+  }
+}

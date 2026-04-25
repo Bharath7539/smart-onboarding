@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Employee Onboarding</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #eef2f7;
+      margin: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: #007bff; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-logout { float: right; background: #333; color: white; }
+
+    .role-badge {
+      float: right;
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+    }
+
+    .employee-card {
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 12px;
+      background: #fafafa;
+    }
+
+    .upload-btn {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #007bff;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    .uploaded {
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2>Smart Employee Onboarding</h2>
+
+<span id="roleBadge" class="role-badge"></span> <button class="btn-logout" onclick="logout()">Logout</button>
+
+  <div id="adminSection">
+
+```
+<h3>Create Employee</h3>
+
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+<input id="department" placeholder="Department">
+<input id="role" placeholder="Role">
+<input id="manager" placeholder="Manager">
+<input id="joining_date" placeholder="Joining Date">
+
+<button class="btn-primary" onclick="createEmployee()">Create Employee</button>
+
+<hr>
+```
+
+  </div>
+
+  <h3>Employees</h3>
+  <div id="output"></div>
+
+</div>
+
+<script>
+
+const API_URL = "https://6aot2047ff.execute-api.ap-south-2.amazonaws.com";
+
+let isAdmin = false;
+let currentUserEmail = "";
+
+/* ---------- AUTH ---------- */
+
+function getToken() {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    alert("Please login again");
+    window.location.href = "login.html";
+    return null;
+  }
+  return token;
+}
+
+function parseJwt(token) {
+  return JSON.parse(atob(token.split('.')[1]));
+}
+
+function checkRole() {
+  const token = getToken();
+  if (!token) return;
+
+  const payload = parseJwt(token);
+  currentUserEmail = payload.email;
+
+  const groups = payload["cognito:groups"] || [];
+
+  if (groups.includes("admin")) {
+    isAdmin = true;
+    roleBadge.innerText = "Admin";
+    roleBadge.style.background = "#dc3545";
+  } else {
+    isAdmin = false;
+    roleBadge.innerText = "User";
+    roleBadge.style.background = "#28a745";
+    adminSection.style.display = "none";
+  }
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  window.location.href = "login.html";
+}
+
+/* ---------- API ---------- */
+
+async function apiRequest(path, method = "GET", body = null) {
+
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch(API_URL + path, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
+      },
+      body: body ? JSON.stringify(body) : null
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || data.message || "Request failed");
+    }
+
+    return data;
+
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+}
+
+/* ---------- STATUS ---------- */
+
+function status(value) {
+  return value === "completed" ? "completed" : "pending";
+}
+
+function color(value) {
+  return value === "completed" ? "green" : "red";
+}
+
+/* ---------- CREATE ---------- */
+
+async function createEmployee() {
+
+  if (!isAdmin) {
+    alert("Only admin allowed");
+    return;
+  }
+
+  // ✅ CORRECT way to read inputs
+  const nameVal = document.getElementById("name").value.trim();
+  const emailVal = document.getElementById("email").value.trim();
+  const deptVal = document.getElementById("department").value;
+  const roleVal = document.getElementById("role").value;
+  const managerVal = document.getElementById("manager").value;
+  const jdVal = document.getElementById("joining_date").value;
+
+  // ✅ validation
+  if (!nameVal || !emailVal) {
+    alert("Name and Email are required");
+    return;
+  }
+
+  const data = {
+    name: nameVal,
+    email: emailVal,
+    department: deptVal,
+    role: roleVal,
+    manager: managerVal,
+    joining_date: jdVal,
+    employment_type: "Full-time"
+  };
+
+  console.log("Sending data:", data); // 🔍 debug
+
+  const res = await apiRequest("/register", "POST", data);
+
+  if (res) {
+    alert(res.message);
+    loadEmployees();
+  }
+}
+/* ---------- LOAD ---------- */
+
+async function loadEmployees() {
+
+  const data = await apiRequest("/employees");
+  if (!data) return;
+
+  let html = "";
+
+ data.forEach(emp => {
+
+  const onboarding = emp.onboarding || {};
+
+  const doc = onboarding.document === "completed" ? "completed" : "pending";
+  const it = status(onboarding.it_provisioning);
+  const policy = status(onboarding.policy);
+
+  const isOwner = emp.email === currentUserEmail;
+
+  // ✅ FIXED
+  const hasUploaded =
+    onboarding.document === "completed" ||
+    uploadedByUser[emp.employee_id];
+
+  html += `
+    <div class="employee-card">
+
+      <b>${emp.name}</b><br>
+      ${emp.email}<br>
+      ${emp.department}<br><br>
+
+      📄 Document: <span style="color:${color(doc)}">${doc}</span><br>
+      💻 IT: <span style="color:${color(it)}">${it}</span><br>
+      📜 Policy: <span style="color:${color(policy)}">${policy}</span><br>
+
+      ${
+        doc === "completed" && it === "completed" && policy === "completed"
+          ? `<div class="uploaded">✔ Fully Completed</div>`
+          : ""
+      }
+
+      ${
+        isAdmin
+          ? `<button class="btn-danger" onclick="deleteEmployee('${emp.email}')">Delete</button>`
+          : isOwner
+            ? (
+                !hasUploaded
+                ? `<label class="upload-btn">
+                     Upload Document
+                     <input type="file" hidden onchange="uploadDoc(event,'${emp.employee_id}')">
+                   </label>`
+                : `<div class="uploaded">✔ Document Uploaded</div>`
+              )
+            : ""
+      }
+
+    </div>
+  `;
+});
+
+  output.innerHTML = html;
+}
+
+/* ---------- DELETE ---------- */
+
+async function deleteEmployee(email) {
+
+  if (!isAdmin) {
+    alert("Only admin allowed");
+    return;
+  }
+
+  const res = await apiRequest("/employees", "DELETE", { email });
+
+  if (res) {
+    alert(res.message);
+    loadEmployees();
+  }
+}
+
+/* ---------- UPLOAD ---------- */
+let uploadedByUser = {};
+function uploadDoc(event, employeeId) {
+
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+
+    const base64 = reader.result.split(",")[1];
+
+    const res = await apiRequest("/upload", "POST", {
+      employee_id: employeeId,
+      file: base64
+    });
+
+    if (res) {
+      alert("Uploaded successfully");
+
+      // 🔥 mark locally
+      uploadedByUser[employeeId] = true;
+
+      loadEmployees();
+    }
+  };
+
+  reader.readAsDataURL(file);
+}
+
+/* ---------- INIT ---------- */
+
+window.onload = () => {
+  checkRole();
+  loadEmployees();
+};
+
+</script>
+
+</body>
+</html>
