@@ -104,7 +104,31 @@
   <h3>Employees</h3>
   <div id="output"></div>
 
+  <h3>Leave Management</h3>
+
+<!-- Employee Apply Leave -->
+<div id="leaveApplySection">
+  <h4>Apply Leave</h4>
+
+  <input id="leave_type" placeholder="Leave Type (sick/casual)">
+  <input id="start_date" placeholder="Start Date (YYYY-MM-DD)">
+  <input id="end_date" placeholder="End Date (YYYY-MM-DD)">
+  <input id="reason" placeholder="Reason">
+
+  <button class="btn-primary" onclick="applyLeave()">Apply Leave</button>
 </div>
+
+<hr>
+
+<h4>Leave Requests</h4>
+<div id="leaveOutput"></div>
+
+</div>
+
+<hr>
+<hr>
+
+
 
 <script>
 
@@ -112,6 +136,7 @@ const API_URL = "https://6aot2047ff.execute-api.ap-south-2.amazonaws.com";
 
 let isAdmin = false;
 let currentUserEmail = "";
+let currentEmployeeId = null;
 
 /* ---------- AUTH ---------- */
 
@@ -136,6 +161,7 @@ function checkRole() {
   const payload = parseJwt(token);
   currentUserEmail = payload.email;
 
+
   const groups = payload["cognito:groups"] || [];
 
   if (groups.includes("admin")) {
@@ -148,6 +174,9 @@ function checkRole() {
     roleBadge.style.background = "#28a745";
     adminSection.style.display = "none";
   }
+  if (isAdmin) {
+  document.getElementById("leaveApplySection").style.display = "none";
+}
 }
 
 function logout() {
@@ -249,18 +278,19 @@ async function loadEmployees() {
 
  data.forEach(emp => {
 
+   if (emp.email === currentUserEmail) {
+      currentEmployeeId = emp.employee_id;
+      console.log("✅ Employee ID mapped:", currentEmployeeId);
+    }
+
   const onboarding = emp.onboarding || {};
+  const docs = emp.documents || {};
 
   const doc = onboarding.document === "completed" ? "completed" : "pending";
   const it = status(onboarding.it_provisioning);
   const policy = status(onboarding.policy);
 
   const isOwner = emp.email === currentUserEmail;
-
-  // ✅ FIXED
-  const hasUploaded =
-    onboarding.document === "completed" ||
-    uploadedByUser[emp.employee_id];
 
   html += `
     <div class="employee-card">
@@ -269,10 +299,11 @@ async function loadEmployees() {
       ${emp.email}<br>
       ${emp.department}<br><br>
 
-      📄 Document: <span style="color:${color(doc)}">${doc}</span><br>
-      💻 IT: <span style="color:${color(it)}">${it}</span><br>
-      📜 Policy: <span style="color:${color(policy)}">${policy}</span><br>
+      ID Proof: <span style="color:${color(docs.id_proof)}">${docs.id_proof || "pending"}</span><br>
+      Degree: <span style="color:${color(docs.degree)}">${docs.degree || "pending"}</span><br>
+      Offer Letter: <span style="color:${color(docs.offer_letter)}">${docs.offer_letter || "pending"}</span><br><br>
 
+      
       ${
         doc === "completed" && it === "completed" && policy === "completed"
           ? `<div class="uploaded">✔ Fully Completed</div>`
@@ -284,12 +315,27 @@ async function loadEmployees() {
           ? `<button class="btn-danger" onclick="deleteEmployee('${emp.email}')">Delete</button>`
           : isOwner
             ? (
-                !hasUploaded
-                ? `<label class="upload-btn">
-                     Upload Document
-                     <input type="file" hidden onchange="uploadDoc(event,'${emp.employee_id}')">
-                   </label>`
-                : `<div class="uploaded">✔ Document Uploaded</div>`
+                onboarding.document !== "completed"
+                
+  ? `
+  <div>
+    <label class="upload-btn">
+      Upload ID Proof
+      <input type="file" hidden onchange="uploadDoc(event,'${emp.employee_id}','id_proof')">
+    </label>
+
+    <label class="upload-btn">
+      Upload Degree
+      <input type="file" hidden onchange="uploadDoc(event,'${emp.employee_id}','degree')">
+    </label>
+
+    <label class="upload-btn">
+      Upload Offer Letter
+      <input type="file" hidden onchange="uploadDoc(event,'${emp.employee_id}','offer_letter')">
+    </label>
+  </div>
+`
+  : `<div class="uploaded">✔ All Documents Uploaded</div>`
               )
             : ""
       }
@@ -319,8 +365,8 @@ async function deleteEmployee(email) {
 }
 
 /* ---------- UPLOAD ---------- */
-let uploadedByUser = {};
-function uploadDoc(event, employeeId) {
+
+function uploadDoc(event, employeeId, docType) {
 
   const file = event.target.files[0];
   if (!file) return;
@@ -330,18 +376,17 @@ function uploadDoc(event, employeeId) {
   reader.onload = async () => {
 
     const base64 = reader.result.split(",")[1];
+    const fileType = file.name.split('.').pop().toLowerCase();
 
     const res = await apiRequest("/upload", "POST", {
       employee_id: employeeId,
-      file: base64
+      file: base64,
+      type: fileType,
+      doc_type: docType   // ✅ IMPORTANT
     });
 
     if (res) {
-      alert("Uploaded successfully");
-
-      // 🔥 mark locally
-      uploadedByUser[employeeId] = true;
-
+      alert(docType + " uploaded");
       loadEmployees();
     }
   };
@@ -349,11 +394,149 @@ function uploadDoc(event, employeeId) {
   reader.readAsDataURL(file);
 }
 
+const employeeId = localStorage.getItem("employee_id");
+console.log("Employee ID:", employeeId);
+
+async function applyLeave() {
+
+    const leaveType = document.getElementById("leave_type").value.trim();
+    const startDate = document.getElementById("start_date").value.trim();
+    const endDate = document.getElementById("end_date").value.trim();
+    const reason = document.getElementById("reason").value.trim();
+
+    const employeeId = currentEmployeeId;
+
+    console.log("Sending employee_id:", employeeId);
+
+    if (!employeeId || !leaveType || !startDate || !endDate) {
+        alert("All fields required");
+        return;
+    }
+
+    const res = await fetch(API_URL + "/apply-leave", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + getToken()
+        },
+        body: JSON.stringify({
+            employee_id: employeeId,
+            leave_type: leaveType,
+            start_date: startDate,
+            end_date: endDate,
+            reason: reason
+        })
+    });
+
+    const data = await res.json();
+    console.log("Response:", data);
+
+    alert(data.message || data.error);
+
+    loadLeaves();
+}
+
+async function loadLeaves() {
+
+  const data = await apiRequest("/leaves");
+  if (!data) return;
+
+  let html = "";
+
+  // ✅ USER → only their leaves
+  let leaves = data;
+  if (!isAdmin) {
+    leaves = data.filter(l => l.employee_id === currentEmployeeId);
+  }
+
+  // ✅ ADMIN → group by employee
+  if (isAdmin) {
+
+    const grouped = {};
+
+    leaves.forEach(l => {
+      if (!grouped[l.employee_id]) {
+        grouped[l.employee_id] = [];
+      }
+      grouped[l.employee_id].push(l);
+    });
+
+    Object.keys(grouped).forEach(empId => {
+
+      html += `<h4 style="margin-top:15px;">Employee: ${empId}</h4>`;
+
+      grouped[empId].forEach(leave => {
+
+        html += renderLeaveCard(leave, false);
+      });
+    });
+
+  } else {
+    // USER VIEW
+    leaves.forEach(leave => {
+      html += renderLeaveCard(leave, true);
+    });
+  }
+
+  document.getElementById("leaveOutput").innerHTML = html;
+}
+
+function renderLeaveCard(leave, isUserView) {
+
+  const statusColor =
+    leave.status === "APPROVED" ? "green" :
+    leave.status === "REJECTED" ? "red" : "orange";
+
+  return `
+    <div class="employee-card">
+      <b>${leave.leave_type}</b><br>
+      ${leave.from_date} → ${leave.to_date}<br>
+      Status: <b style="color:${statusColor}">${leave.status}</b><br>
+
+      ${
+        isAdmin && leave.status === "PENDING"
+          ? `
+            <button class="btn-primary" onclick="approveLeave('${leave.employee_id}','${leave.request_id}','APPROVE')">Approve</button>
+            <button class="btn-danger" onclick="approveLeave('${leave.employee_id}','${leave.request_id}','REJECT')">Reject</button>
+          `
+          : ""
+      }
+
+      ${
+        isUserView
+          ? `<div style="color:#666;margin-top:5px;">Your request</div>`
+          : ""
+      }
+    </div>
+  `;
+}
+
+async function approveLeave(employee_id, request_id, action) {
+
+  if (!isAdmin) {
+    alert("Only admin allowed");
+    return;
+  }
+
+  const res = await apiRequest("/approve-leave", "POST", {
+    employee_id,
+    request_id,
+    action
+  });
+
+  if (res) {
+    alert("Leave " + action + " successful");
+
+    // ✅ refresh UI
+    loadLeaves();
+  }
+}
 /* ---------- INIT ---------- */
 
 window.onload = () => {
   checkRole();
   loadEmployees();
+  loadLeaves();   
 };
 
 </script>
