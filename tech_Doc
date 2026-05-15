@@ -1,0 +1,456 @@
+# Smart Employee Platform
+
+## Technical Design Document
+
+---
+
+# 1. Project Overview
+
+The Smart Employee Platform is a serverless employee management and attendance solution built on AWS. The platform combines employee onboarding, leave management, AI-powered attendance tracking, analytics, and workflow automation into a unified cloud-native system.
+
+The system uses facial recognition through Amazon Rekognition to enable contactless attendance marking. Employees can clock IN and OUT using a webcam interface, while administrators can monitor attendance, manage employees, approve leave requests, and analyze attendance patterns through an integrated dashboard.
+
+The architecture is fully serverless and event-driven to ensure scalability, cost efficiency, and operational simplicity.
+
+---
+
+# 2. Objectives
+
+## Primary Goals
+
+* Automate employee onboarding workflows
+* Enable AI-powered face recognition attendance
+* Eliminate manual attendance registers
+* Provide centralized employee management
+* Generate attendance analytics automatically
+* Maintain secure cloud-native architecture
+
+---
+
+# 3. System Architecture
+
+## Frontend Layer
+
+### Technologies
+
+* HTML
+* CSS
+* JavaScript
+
+### Features
+
+* Employee onboarding
+* Leave application
+* Webcam attendance capture
+* Attendance dashboard
+* Weekly analytics
+* Role-based access UI
+
+### Hosting
+
+* Amazon S3 Static Website Hosting
+* CloudFront (optional CDN layer)
+
+---
+
+# 4. Authentication & Authorization
+
+## Service Used
+
+### Amazon Cognito
+
+### Responsibilities
+
+* User authentication
+* Token generation
+* Session management
+* Role-based access control
+
+### User Roles
+
+| Role     | Permissions               |
+| -------- | ------------------------- |
+| Admin    | Full system access        |
+| Employee | Attendance + leave access |
+| Manager  | Leave approval access     |
+
+---
+
+# 5. Backend Architecture
+
+## API Layer
+
+### Amazon API Gateway
+
+### APIs Implemented
+
+| Endpoint          | Method          | Purpose                           |
+| ----------------- | --------------- | --------------------------------- |
+| /register         | POST            | Register employee face            |
+| /attendance       | POST            | Mark attendance                   |
+| /upload-url       | GET             | Generate pre-signed S3 upload URL |
+| /today-attendance | GET             | Fetch attendance logs             |
+| /weekly-summary   | GET             | Fetch analytics                   |
+| /apply-leave      | POST            | Apply leave                       |
+| /approve-leave    | POST            | Approve/reject leave              |
+| /employees        | GET/POST/DELETE | Employee management               |
+
+---
+
+# 6. Compute Layer
+
+## Service Used
+
+### AWS Lambda
+
+### Lambda Functions
+
+| Function                  | Purpose                     |
+| ------------------------- | --------------------------- |
+| register-face             | Index employee faces        |
+| mark-attendance           | Face recognition attendance |
+| upload-url                | Generate S3 pre-signed URL  |
+| weekly-attendance-summary | Generate analytics          |
+| mark-absent-employees     | Daily absent automation     |
+| leave-management          | Leave workflows             |
+| onboarding-service        | Employee onboarding         |
+
+---
+
+# 7. Attendance Workflow
+
+## Step-by-Step Flow
+
+### Step 1 — Capture Image
+
+Employee webcam captures image from browser.
+
+### Step 2 — Upload to S3
+
+Frontend requests a pre-signed upload URL from Lambda.
+
+### Step 3 — Store Image
+
+Image uploaded temporarily to S3 bucket.
+
+### Step 4 — Face Recognition
+
+Lambda calls Amazon Rekognition:
+
+* detects face
+* searches face collection
+* returns confidence score
+
+### Step 5 — Employee Lookup
+
+Matched faceId is mapped to employee record in DynamoDB.
+
+### Step 6 — Attendance Write
+
+Attendance record stored in DynamoDB:
+
+* employeeId
+* timestamp
+* status
+* confidence
+
+### Step 7 — Dashboard Update
+
+Attendance dashboard refreshes automatically.
+
+---
+
+# 8. AI Attendance Logic
+
+## Rekognition Collection
+
+### Collection Name
+
+```text
+employee-faces
+```
+
+### Matching Threshold
+
+```text
+95%
+```
+
+### Attendance Rules
+
+| Condition        | Result   |
+| ---------------- | -------- |
+| First scan       | IN       |
+| Second scan      | OUT      |
+| Additional scans | Rejected |
+
+---
+
+# 9. Database Design
+
+## DynamoDB Tables
+
+---
+
+## Employee Table (Hyderabad Region)
+
+### Table Name
+
+```text
+employee
+```
+
+### Partition Key
+
+```text
+employee_id
+```
+
+### Stored Data
+
+* employee details
+* onboarding status
+* faceId
+* documents
+* department
+* role
+
+---
+
+## Attendance Table (Mumbai Region)
+
+### Table Name
+
+```text
+attendance
+```
+
+### Partition Key
+
+```text
+employeeId
+```
+
+### Sort Key
+
+```text
+timestamp
+```
+
+### Stored Data
+
+* clock IN
+* clock OUT
+* attendance status
+* confidence score
+
+---
+
+## Leave Tables
+
+### Tables
+
+* leave_requests
+* leave_balances
+* leave_config
+
+---
+
+# 10. Analytics System
+
+## Weekly Analytics Lambda
+
+### Generated Metrics
+
+* Present days
+* Absent days
+* Late arrivals
+* Attendance percentage
+
+### Late Rule
+
+Employee clock-IN after:
+
+```text
+10:00 AM
+```
+
+is considered late.
+
+---
+
+# 11. Automation & Scheduling
+
+## Service Used
+
+### Amazon EventBridge Scheduler
+
+### Scheduled Workflow
+
+Runs daily at:
+
+```text
+11:59 PM IST
+```
+
+### Responsibilities
+
+* scan employee attendance
+* identify absentees
+* mark ABSENT status
+* update DynamoDB
+
+---
+
+# 12. Storage Design
+
+## Amazon S3
+
+### Bucket
+
+```text
+smart-employee-platform-f13
+```
+
+### Folder Structure
+
+| Folder      | Purpose                       |
+| ----------- | ----------------------------- |
+| employees/  | Registered employee images    |
+| attendance/ | Temporary attendance captures |
+| documents/  | Employee documents            |
+
+---
+
+# 13. Security Architecture
+
+## IAM Least Privilege
+
+Lambda permissions restricted to:
+
+* required DynamoDB tables
+* required S3 prefixes
+* Rekognition APIs only
+
+---
+
+## Encryption
+
+### DynamoDB
+
+* encryption at rest enabled
+
+### S3
+
+* AWS-managed encryption enabled
+
+---
+
+## Lifecycle Policies
+
+Attendance images automatically deleted using:
+
+```text
+S3 Lifecycle Rules
+```
+
+---
+
+## Versioning
+
+S3 bucket versioning enabled for:
+
+* audit trail
+* accidental recovery
+
+---
+
+# 14. Multi-Region Architecture
+
+## Hyderabad (ap-south-2)
+
+### Responsibilities
+
+* onboarding
+* HR management
+* employee master data
+* leave workflows
+
+---
+
+## Mumbai (ap-south-1)
+
+### Responsibilities
+
+* attendance services
+* Rekognition
+* analytics
+* automation
+* attendance APIs
+
+---
+
+# 15. Frontend Features
+
+## Unified Dashboard
+
+### Modules
+
+* Employee onboarding
+* Leave management
+* Attendance capture
+* Attendance logs
+* Weekly analytics
+
+---
+
+# 16. Compliance Features
+
+## Biometric Data Protection
+
+* attendance images auto-deleted
+* temporary storage only
+* face recognition handled securely through AWS Rekognition
+
+---
+
+# 17. Cost Optimization
+
+## Serverless Benefits
+
+* pay-per-use Lambda execution
+* no server maintenance
+* automatic scaling
+* minimal idle cost
+
+---
+
+# 18. Future Enhancements
+
+* Mobile application
+* QR backup attendance
+* Geo-fencing
+* HRMS integration
+* Payroll integration
+* Slack/MS Teams notifications
+* Amazon QuickSight dashboards
+
+---
+
+# 19. Conclusion
+
+The Smart Employee Platform successfully demonstrates a modern serverless enterprise architecture using AWS managed services.
+
+The system integrates:
+
+* AI-powered attendance
+* employee onboarding
+* workflow automation
+* leave management
+* analytics
+* cloud-native security
+
+into one scalable and maintainable platform.
+
+The solution removes manual attendance processes while improving operational efficiency, automation, and reporting capabilities.
+![alt text](architecture_diagram.png)

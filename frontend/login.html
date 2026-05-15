@@ -1,149 +1,315 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Smart Employee Onboarding & Identity Service</title>
-
+  <meta charset="UTF-8">
+  <title>Smart Employee Onboarding — Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Syne:wght@600;700&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: Arial;
-      background: #f4f6f8;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
+    :root {
+      --bg: #0f1117;
+      --surface: #181c27;
+      --surface2: #1e2333;
+      --border: #2a2f45;
+      --accent: #4f6ef7;
+      --accent2: #38d9a9;
+      --danger: #f05252;
+      --text: #e8eaf2;
+      --muted: #6b7394;
     }
 
-    .login-box {
-      width: 340px;
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background decoration */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79,110,247,0.07) 0%, transparent 70%);
+      top: -150px;
+      left: -150px;
+      pointer-events: none;
+    }
+
+    body::after {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56,217,169,0.05) 0%, transparent 70%);
+      bottom: -100px;
+      right: -100px;
+      pointer-events: none;
+    }
+
+    .login-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      width: 100%;
+      max-width: 400px;
+      padding: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Brand */
+    .brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
       text-align: center;
     }
 
-    .project-title {
+    .brand-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), #7b8ff7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 24px rgba(79,110,247,0.3);
+    }
+
+    .brand-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-sub {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* Card */
+    .login-card {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
       font-size: 18px;
-      font-weight: bold;
-      color: #007bff;
-      margin-bottom: 10px;
+      font-weight: 600;
     }
 
-    h2 {
-      margin-bottom: 20px;
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
     }
 
-    input {
+    /* Fields */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    .field input {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0056b3;
-    }
-
-    .error {
-      color: red;
-      margin-top: 10px;
+      padding: 11px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
       font-size: 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,110,247,0.12);
+    }
+
+    .field input::placeholder { color: var(--muted); }
+
+    /* Button */
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, transform .12s, box-shadow .18s;
+      box-shadow: 0 4px 16px rgba(79,110,247,0.3);
+      margin-top: 4px;
+    }
+
+    .btn-login:hover {
+      background: #3d5ce8;
+      box-shadow: 0 6px 20px rgba(79,110,247,0.4);
+    }
+
+    .btn-login:active { transform: scale(0.99); }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(240,82,82,0.1);
+      border: 1px solid rgba(240,82,82,0.25);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--danger);
+      font-size: 13px;
+    }
+
+    .error-msg.visible { display: flex; }
+
+    /* Footer */
+    .footer {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
     }
   </style>
 </head>
-
 <body>
 
-<div class="login-box">
+<div class="login-wrapper">
 
-  <!-- ✅ PROJECT NAME -->
-  <div class="project-title">
-    Smart Employee Onboarding & Identity Service
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand-icon">🏢</div>
+    <div>
+      <div class="brand-name">Smart Onboarding</div>
+      <div class="brand-sub">Employee Identity & Onboarding Service</div>
+    </div>
   </div>
 
-  <h2>Employee Login</h2>
+  <!-- Card -->
+  <div class="login-card">
+    <div>
+      <div class="card-title">Welcome back</div>
+      <div class="card-subtitle">Sign in to your employee account</div>
+    </div>
 
-  <input id="email" placeholder="Email">
-  <input id="password" type="password" placeholder="Password">
+    <div class="field">
+      <label>Email Address</label>
+      <input id="email" type="email" placeholder="you@company.com" autocomplete="email">
+    </div>
 
-  <button onclick="login()">Login</button>
+    <div class="field">
+      <label>Password</label>
+      <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
 
-  <div id="error" class="error"></div>
+    <div id="error" class="error-msg">
+      <span>⚠</span>
+      <span id="errorText"></span>
+    </div>
+
+    <button class="btn-login" onclick="login()">Sign In</button>
+  </div>
+
+  <div class="footer">Secured by Amazon Cognito</div>
 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.2.0/dist/amazon-cognito-identity.min.js"></script>
-
 <script>
-function login() {
-
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
-
-  if (!email || !password) {
-    document.getElementById("error").innerText = "Enter email and password";
-    return;
+  function showError(msg) {
+    const box = document.getElementById("error");
+    document.getElementById("errorText").innerText = msg;
+    box.classList.add("visible");
   }
 
-  const poolData = {
-    UserPoolId: "ap-south-2_OfYiLqtzQ",
-    ClientId: "6cgh6nv08j899krghn7vtjfb15"
-  };
+  function hideError() {
+    document.getElementById("error").classList.remove("visible");
+  }
 
-  const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+  function login() {
+    hideError();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
 
-  const cognitoUser = new AmazonCognitoIdentity.CognitoUser({
-    Username: email,
-    Pool: userPool
-  });
-
-  const authDetails = new AmazonCognitoIdentity.AuthenticationDetails({
-    Username: email,
-    Password: password
-  });
-
-  cognitoUser.authenticateUser(authDetails, {
-
-    onSuccess: function(result) {
-      const token = result.getIdToken().getJwtToken();
-      localStorage.setItem("token", token);
-      window.location.href = "dashboard.html";
-    },
-
-    onFailure: function(err) {
-      document.getElementById("error").innerText = err.message;
-    },
-
-    newPasswordRequired: function() {
-      const newPassword = prompt("Enter new password:");
-
-      cognitoUser.completeNewPasswordChallenge(newPassword, {}, {
-        onSuccess: function(result) {
-          const token = result.getIdToken().getJwtToken();
-          localStorage.setItem("token", token);
-          window.location.href = "dashboard.html";
-        },
-        onFailure: function(err) {
-          alert(err.message);
-        }
-      });
+    if (!email || !password) {
+      showError("Please enter your email and password.");
+      return;
     }
 
-  });
-}
-</script>
+    const poolData = {
+      UserPoolId: "ap-south-2_OfYiLqtzQ",
+      ClientId: "6cgh6nv08j899krghn7vtjfb15"
+    };
 
+    const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+    const cognitoUser = new AmazonCognitoIdentity.CognitoUser({ Username: email, Pool: userPool });
+    const authDetails = new AmazonCognitoIdentity.AuthenticationDetails({ Username: email, Password: password });
+
+    cognitoUser.authenticateUser(authDetails, {
+      onSuccess: function(result) {
+        const token = result.getIdToken().getJwtToken();
+        localStorage.setItem("token", token);
+        window.location.href = "dashboard.html";
+      },
+      onFailure: function(err) {
+        showError(err.message);
+      },
+      newPasswordRequired: function() {
+        const newPassword = prompt("Your account requires a new password. Please enter one:");
+        if (!newPassword) return;
+        cognitoUser.completeNewPasswordChallenge(newPassword, {}, {
+          onSuccess: function(result) {
+            const token = result.getIdToken().getJwtToken();
+            localStorage.setItem("token", token);
+            window.location.href = "dashboard.html";
+          },
+          onFailure: function(err) {
+            showError(err.message);
+          }
+        });
+      }
+    });
+  }
+
+  // Allow Enter key to submit
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") login();
+  });
+</script>
 </body>
 </html>
